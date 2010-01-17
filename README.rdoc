@@ -1,14 +1,13 @@
 = rack-fb 
 
 Rack-fb is currently a work in progress.  It aims to be a lightweight client for the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
+It is mostly based on MiniFB (http://github.com/appoxy/mini_fb) and includes some features inspired by rack-facebook (http://github.com/carlosparamio/rack-facebook).
 
-Installation
--------------
+== Installation
 
     gem install rack-fb
 
-General Usage
--------------
+== General Usage
 
 The most general case is to use MiniFB.call method:
 
@@ -16,8 +15,7 @@ The most general case is to use MiniFB.call method:
 
 Which simply returns the parsed json response from Facebook.
 
-Some Higher Level Objects for Common Uses
-----------------------
+== Some Higher Level Objects for Common Uses
 
 Get a MiniFB::Session:
 
@@ -39,12 +37,7 @@ Or if you want other photos, try:
 
     photos = @fb.photos("pids"=>[12343243,920382343,9208348])
 
-Support
---------
 
-Join our Discussion Group at: http://groups.google.com/group/mini_fb
-
-=======
 This Rack middleware checks the signature of Facebook params, and
 converts them to Ruby objects when appropiate. Also, it converts
 the request method from the Facebook POST to the original HTTP
@@ -68,8 +61,3 @@ Using a block condition:
     use Rack::Facebook, "my_facebook_secret_key" do |env|
       env['REQUEST_URI'] =~ /^\/facebook_only/
     end
-
-# Credits
-
-Carlos Paramio
-
