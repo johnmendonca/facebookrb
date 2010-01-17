@@ -2,7 +2,7 @@ ENV['RACK_ENV'] = 'test'
 
 require 'rubygems'
 
-require File.join(File.dirname(__FILE__), %w{ .. lib rack facebook })
+require 'rack/fb'
 
 require 'spec'
 require 'spec/expectations'

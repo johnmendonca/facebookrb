@@ -2,12 +2,15 @@ require "#{File.dirname(__FILE__)}/spec_helper"
 
 require 'rack/request'
 require 'rack/mock'
-require 'rack/facebook'
 
 describe Rack::Facebook do
   APP_NAME = 'my_app'
   SECRET = "123456789"
   API_KEY = "616313"
+
+  it 'should correctly calculate and validate signatures' do
+    pending
+  end
   
   def calculate_signature(hash)
     raw_string = hash.map{ |*pair| pair.join('=') }.sort.join

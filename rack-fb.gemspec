@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.date = %q{2010-01-16}
   s.email = %q{joaosinho@gmail.com}
   s.extra_rdoc_files = ["README.markdown"]
-  s.files = ["README.markdown", "Rakefile", "spec", "lib/rack", "lib/rack/facebook.rb", "lib/mini_fb.rb"]
+  s.files = ["README.markdown", "Rakefile", "spec", "lib/rack", "lib/rack/fb", "lib/rack/fb/mini_fb.rb", "lib/rack/fb.rb"]
   s.homepage = %q{http://github.com/johnmendonca/rack-fb}
   s.rdoc_options = ["--main", "README.markdown"]
   s.require_paths = ["lib"]

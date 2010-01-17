@@ -1,4 +1,4 @@
-require 'digest'
+require 'digest/md5'
 require 'rack/request'
 
 module Rack
@@ -17,23 +17,16 @@ module Rack
   #
   # In your rack builder:
   #
-  #   use Rack::Facebook, :application_secret => "SECRET", :api_key => "APIKEY"
-  #
-  # Using a block condition:
-  #
-  #   use Rack::Facebook, options do |env|
-  #     env['REQUEST_URI'] =~ /^\/facebook_only/
-  #   end
+  #   use Rack::Facebook, :api_key => "APIKEY", :secret => "SECRET"
   #
   # == References
   # * http://wiki.developers.facebook.com/index.php/Authorizing_Applications
   # * http://wiki.developers.facebook.com/index.php/Verifying_The_Signature
   #
   class Facebook    
-    def initialize(app, options, &condition)
+    def initialize(app, options)
       @app = app
       @options = options
-      @condition = condition
     end
     
     def app_name
@@ -41,7 +34,7 @@ module Rack
     end
     
     def secret
-      @options[:application_secret]
+      @options[:secret]
     end
     
     def api_key
@@ -52,7 +45,7 @@ module Rack
       request = Request.new(env)
       request.api_key = api_key      
       
-      if passes_condition?(request) and request.facebook?
+      if request.facebook?
         valid = true
         
         if request.params_signature
@@ -76,18 +69,79 @@ module Rack
     end
     
     private
-    
-    def passes_condition?(request)
-      @condition.nil? or @condition.call(request.env)
+    # Get the signed parameters that were sent from Facebook. Validates the set
+    # of parameters against the included signature.
+    #
+    # Since Facebook sends data to your callback URL via unsecured means, the
+    # signature is the only way to make sure that the data actually came from
+    # Facebook. So if an app receives a request at the callback URL, it should
+    # always verify the signature that comes with against your own secret key.
+    # Otherwise, it's possible for someone to spoof a request by
+    # pretending to be someone else, i.e.:
+    #      www.your-callback-url.com/?fb_user=10101
+    #
+    # This is done automatically by verify_fb_params.
+    #
+    # @param  assoc  $params     a full array of external parameters.
+    #                            presumed $_GET, $_POST, or $_COOKIE
+    # @param  int    $timeout    number of seconds that the args are good for.
+    #                            Specifically good for forcing cookies to expire.
+    # @param  string $namespace  prefix string for the set of parameters we want
+    #                            to verify. i.e., fb_sig or fb_post_sig
+    #
+    # @return  assoc the subset of parameters containing the given prefix,
+    #                and also matching the signature associated with them.
+    #          OR    an empty array if the params do not validate
+    def get_valid_fb_params(params,  namespace='fb_sig')
+      prefix = "#{namespace}_"
+      fb_params = Hash.new
+      params.each do |key, value|
+        if key =~ /^#{prefix}(.*)$/
+          fb_params[$1] = value
+        end
+      end
+      
+      signature = params[namespace]
+      if signature && valid_signature?(fb_params, signature)
+        fb_params
+      else
+        Hash.new
+      end
+    end
+
+    # Validates that a given set of parameters match their signature.
+    # Parameters all match a given input prefix, such as "fb_sig".
+    #
+    # Parameters:
+    #   fb_params     an array of all Facebook-sent parameters, not 
+    #                 including the signature itself
+    #   expected_sig  the expected result to check against
+    #
+    def valid_signature?(fb_params, expected_sig)
+      expected_sig == generate_signature(fb_params, self.secret)
     end
     
-    def valid_signature?(fb_params, actual_sig)
-      actual_sig == calculate_signature(fb_params)
-    end
-    
-    def calculate_signature(hash)
-      raw_string = hash.map{ |*pair| pair.join('=') }.sort.join
-      Digest::MD5.hexdigest([raw_string, secret].join)
+    # Generate a signature using the application secret key.
+    #
+    # The only two entities that know your secret key are you and Facebook,
+    # according to the Terms of Service. Since nobody else can generate
+    # the signature, you can rely on it to verify that the information
+    # came from Facebook.
+    #
+    # Parameters:
+    #   fb_params   an array of all Facebook-sent parameters, NOT INCLUDING 
+    #               the signature itself
+    #   secret      your app's secret key
+    #
+    # Returns:
+    #   a md5 hash to be checked against the signature provided by Facebook
+    #
+    def generate_signature(fb_params, secret)
+      str = String.new
+      fb_params.sort.each do |key, value|
+        str << "#{key}=#{value}"
+      end
+      Digest::MD5.hexdigest("#{str}#{secret}")
     end
     
     def save_facebook_params(params, env)
