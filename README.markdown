@@ -1,14 +1,11 @@
-MiniFB - the simple miniature facebook library
-==============================================
+= rack-fb 
 
-MiniFB is a small, lightweight Ruby library for interacting with the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
+Rack-fb is currently a work in progress.  It aims to be a lightweight client for the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
 
 Installation
 -------------
 
-We're using gemcutter so be sure to have gemcutter as a source, then: 
-
-    gem install mini_fb
+    gem install rack-fb
 
 General Usage
 -------------
