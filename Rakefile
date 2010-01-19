@@ -21,7 +21,7 @@ spec = Gem::Specification.new do |s|
 
   # Change these as appropriate
   s.name              = "facebookrb"
-  s.version           = "0.0.1"
+  s.version           = "0.1.0"
   s.summary           = "Simple Facebook API client and middleware"
   s.author            = "John Mendonca"
   s.email             = "joaosinho@gmail.com"
@@ -37,7 +37,7 @@ spec = Gem::Specification.new do |s|
 
   # If you want to depend on other gems, add them here, along with any
   # relevant versions
-  # s.add_dependency("rack", "~> 1.0.1")
+   s.add_dependency("yajl-ruby")
 
   # If your tests use any gems, include them here
   s.add_development_dependency("rspec")

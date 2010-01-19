@@ -107,18 +107,14 @@ module FacebookRb
     # pretending to be someone else, i.e.:
     #      www.your-callback-url.com/?fb_user=10101
     #
-    # This is done automatically by verify_fb_params.
+    # Parameters:
+    #   params     A hash of parameters, i.e., from a HTTP request, or cookies
+    #   namespace  prefix string for the set of parameters we want to verify. 
+    #              i.e., fb_sig or fb_post_sig
+    # Returns:
+    #   the subset of parameters containing the given prefix, and also matching
+    #   the signature associated with them, or nil if the params do not validate
     #
-    # @param  assoc  $params     a full array of external parameters.
-    #                            presumed $_GET, $_POST, or $_COOKIE
-    # @param  int    $timeout    number of seconds that the args are good for.
-    #                            Specifically good for forcing cookies to expire.
-    # @param  string $namespace  prefix string for the set of parameters we want
-    #                            to verify. i.e., fb_sig or fb_post_sig
-    #
-    # @return  assoc the subset of parameters containing the given prefix,
-    #                and also matching the signature associated with them.
-    #          OR    an empty array if the params do not validate
     def get_valid_fb_params(params,  namespace='fb_sig')
       prefix = "#{namespace}_"
       fb_params = Hash.new
