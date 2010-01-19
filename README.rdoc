@@ -1,21 +1,39 @@
-= rack-fb 
+= facebookrb 
 
-Rack-fb is currently a work in progress.  It aims to be a lightweight client for the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
+Facebookrb is currently a work in progress.
+It aims to be a lightweight yet fully featured client for the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
 It is mostly based on MiniFB (http://github.com/appoxy/mini_fb) and includes some features inspired by rack-facebook (http://github.com/carlosparamio/rack-facebook).
 Otherwise, it tries to emulate the official Facebook PHP library.
 
 == Installation
 
-    gem install rack-fb
+    gem install facebookrb
+
+You will need to have installed either the `yajl-ruby` or `json` gem for JSON encoding/decoding.
 
 == General Usage
 
-    require 'rack/fb'
+You will want to create a client to make calls to Facebook
+
+    fb_client = FacebookRb::Client.new("API_KEY", "SECRET")
+
+If you are using the middleware, there will be one created for you already,
+available in `env['facebook.client']`.
+
+The client will ask for results in JSON by default.
+
+== Middleware
+
+The middleware checks the signature of Facebook params, and stores them in env.
+
+    require 'facebookrb'
 
     use Rack::Facebook, :secret => "SECRET", :api_key => "APIKEY"
 
-The Facebook parameters in the request are stored if the request is valid:
-  * the signature is calculated - http://wiki.developers.facebook.com/index.php/Verifying_The_Signature
+Also, you can optionally convert the request method from the Facebook POST to the original HTTP
+method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
+
+The Facebook parameters in the request are stored if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
 
     env['facebook.params']
 
@@ -26,32 +44,14 @@ The most general case is to use call method:
 
 Which simply returns the parsed json response from Facebook.
 
-== Some Higher Level Objects for Common Uses
+== Current Features
 
-Get a MiniFB::Session:
 
-    @fb = MiniFB::Session.new(FB_API_KEY, FB_SECRET, @fb_session, @fb_uid)
+== Planned Features
 
-This Rack middleware checks the signature of Facebook params, and
-converts them to Ruby objects when appropiate. Also, it converts
-the request method from the Facebook POST to the original HTTP
-method used by the client.
-
-If the signature is wrong, it returns a "400 Invalid Facebook Signature".
-
-Optionally, it can take a block that receives the Rack environment
-and returns a value that evaluates to true when we want the middleware to
-be executed for the specific request.
-
-# Usage
-
-In your config.ru:
-
-    require 'rack/facebook'
-    use Rack::Facebook, "my_facebook_secret_key"
-
-Using a block condition:
-
-    use Rack::Facebook, "my_facebook_secret_key" do |env|
-      env['REQUEST_URI'] =~ /^\/facebook_only/
-    end
+  * Support for Facebook Connect, cookie params
+  * Batching (http://wiki.developers.facebook.com/index.php/Using_Batching_API)
+  * Base domain (http://wiki.developers.facebook.com/index.php/Base_Domain)
+  * Preload FQL (http://wiki.developers.facebook.com/index.php/Preload_FQL)
+  * Permissions API (http://wiki.developers.facebook.com/index.php/Permissions_API)
+  * Session Secret (http://wiki.developers.facebook.com/index.php/Session_Secret)

@@ -2,7 +2,7 @@ ENV['RACK_ENV'] = 'test'
 
 require 'rubygems'
 
-require 'rack/fb'
+require 'facebookrb'
 
 require 'spec'
 require 'spec/expectations'
