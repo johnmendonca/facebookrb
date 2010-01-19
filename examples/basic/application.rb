@@ -6,7 +6,7 @@ require 'haml'
 
 require 'facebookrb'
 
-use FacebookRb::Middleware, :api_key => 'b148c9a32f5a8bd089305ca6a52f3214', :secret => '786e1d6080233ef3f302b4f0fc149665'
+use FacebookRb::Middleware, :api_key => 'APIKEY', :secret => 'SECRET'
 
 get '/' do
   fb_params = env['facebook.params'] || {:damn => 'man'}
