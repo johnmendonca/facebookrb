@@ -1,7 +1,7 @@
 = facebookrb 
 
 Facebookrb is currently a work in progress.
-It aims to be a lightweight yet fully featured client for the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
+It aims to be a lightweight yet fully featured client for the {Facebook API}[http://wiki.developers.facebook.com/index.php/API].
 It is mostly based on MiniFB (http://github.com/appoxy/mini_fb) and includes some features inspired by rack-facebook (http://github.com/carlosparamio/rack-facebook).
 In other instances, it emulates the official Facebook PHP library.
 
@@ -11,14 +11,14 @@ In other instances, it emulates the official Facebook PHP library.
 
 == General Usage
 	
-	require 'facebookrb'
+    require 'facebookrb'
 
 You will want to create a client to make calls to Facebook
 
     fb_client = FacebookRb::Client.new("API_KEY", "SECRET")
 
 If you are using the middleware, there will be one created for you already,
-available in `env['facebook.client']`.
+available in <tt>env['facebook.client']</tt>.
 
     user_hash = fb_client.call("Users.getInfo", "session_key"=>@session_key, "uids"=>@uid, "fields"=>User.all_fields)
 
@@ -33,15 +33,15 @@ The middleware checks the signature of Facebook params, and stores them in env.
 
     use Rack::Facebook, :api_key => "APIKEY", :secret => "SECRET"
 
-The Facebook parameters in the request are stored in `env['facebook.params']` and `env['facebook.client'].fb_params` if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
+The Facebook parameters in the request are stored in <tt>env['facebook.params']</tt> and <tt>env['facebook.client'].fb_params</tt> if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
 
 == Planned Features
 
-  * Facebook Connect
-  * Batching (http://wiki.developers.facebook.com/index.php/Using_Batching_API)
-  * Base domain (http://wiki.developers.facebook.com/index.php/Base_Domain)
-  * Preload FQL (http://wiki.developers.facebook.com/index.php/Preload_FQL)
-  * Permissions API (http://wiki.developers.facebook.com/index.php/Permissions_API)
-  * Session Secret (http://wiki.developers.facebook.com/index.php/Session_Secret)
-  * Converting the request method from the Facebook POST to the original HTTP method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
+* Facebook Connect
+* {Batching}[http://wiki.developers.facebook.com/index.php/Using_Batching_API]
+* {Base domain}[http://wiki.developers.facebook.com/index.php/Base_Domain]
+* {Preload FQL}[http://wiki.developers.facebook.com/index.php/Preload_FQL]
+* {Permissions API}[http://wiki.developers.facebook.com/index.php/Permissions_API]
+* {Session Secret}[http://wiki.developers.facebook.com/index.php/Session_Secret]
+* Converting the request method from the Facebook POST to the original HTTP method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
 
