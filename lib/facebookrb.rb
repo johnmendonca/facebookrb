@@ -76,7 +76,7 @@ module FacebookRb
 
       api_params['sig'] = generate_signature(api_params, self.secret)
 
-      # Call website with POST request
+      # Call Facebook with POST request
       response = Net::HTTP.post_form( URI.parse(FB_URL), api_params )
 
       # Handle response
@@ -94,6 +94,12 @@ module FacebookRb
       #call_as_apikey for Permissions API
       #ss Session secret
       #use_ssl_resources
+    end
+
+    def extract_fb_params(env)
+      request = Rack::Request(env)
+      fb_params = get_valid_fb_params(request.params, 'fb_sig')
+      fb_params = get_valid_fb_params(request.cookies, @options[:api_key])
     end
 
     # Get the signed parameters that were sent from Facebook. Validates the set
@@ -168,6 +174,36 @@ module FacebookRb
         str << "#{key.to_s}=#{value}"
       end
       Digest::MD5.hexdigest("#{str}#{secret}")
+    end
+
+    #
+    # Allows making calls like `client.users.getInfo`
+    #
+    class APIProxy
+      Types = %w[ admin application auth batch comments connect data events
+        fbml feed fql friends groups links liveMessage notes notifications
+        pages photos profile sms status stream users video ]
+
+      alias :__class__ :class
+      alias :__inspect__ :inspect
+      instance_methods.each { |m| undef_method m unless m =~ /^(__|object_id)/ }
+      alias :inspect :__inspect__
+
+      def initialize name, obj
+        @name, @obj = name, obj
+      end
+
+      def method_missing method, opts = {}
+        @obj.call "#{@name}.#{method}", opts
+      end
+    end
+
+    APIProxy::Types.each do |n|
+      class_eval %[
+        def #{n}
+          (@proxies||={})[:#{n}] ||= APIProxy.new(:#{n}, self)
+        end
+      ]
     end
   end
 
