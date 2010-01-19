@@ -1,17 +1,14 @@
-begin
-  require 'yajl/json_gem'
-rescue LoadError
-  require 'json'
-end
-
+require 'uri'
+require 'net/http'
 require 'digest/md5'
+require 'yajl'
 
 module FacebookRb
-  class FacebookError < StandardError
-    attr_accessor :code, :message
-    def initialize( error_code, error_msg )
-      self.code = error_code
-      self.message = error_msg
+  class FacebookError < RuntimeError
+    attr_accessor :fb_code, :fb_message
+    def initialize(error_code, error_msg)
+      self.fb_code = error_code
+      self.fb_message = error_msg
       super("Facebook error #{error_code}: #{error_msg}" )
     end
   end
@@ -19,18 +16,32 @@ module FacebookRb
   class Client
     FB_URL = "http://api.facebook.com/restserver.php"
     FB_API_VERSION = "1.0"
+    USER_FIELDS = [:uid, :status, :political, :pic_small, :name, :quotes, 
+      :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, 
+      :timezone, :relationship_status, :hometown_location, :about_me, 
+      :wall_count, :significant_other_id, :pic_big, :music, :work_history, 
+      :sex, :religion, :notes_count, :activities, :pic_square, :movies, 
+      :has_added_app, :education_history, :birthday, :birthday_date, 
+      :first_name, :meeting_for, :last_name, :interests, :current_location, 
+      :pic, :books, :affiliations, :locale, :profile_url, :proxied_email, 
+      :email_hashes, :allowed_restrictions, :pic_with_logo, :pic_big_with_logo, 
+      :pic_small_with_logo, :pic_square_with_logo]
+    USER_FIELDS_STANDARD = [:uid, :first_name, :last_name, :name, :timezone, 
+      :birthday, :sex, :affiliations, :locale, :profile_url, :proxied_email]
 
-    attr_accessor :api_key, :secret, :fb_params, :session_key
-    attr_accessor :results
+    attr_accessor :api_key, :secret, :session_key, :fb_params
+    attr_accessor :last_response
 
-    def initialize(api_key, secret, fb_params=nil)
+    def initialize(api_key, secret, session_key=nil)
       @api_key = api_key
       @secret = secret
-      @fb_params = fb_params
-      @session_key = fb_params['session_key'] if fb_params
+      @session_key = session_key
     end
 
-    BAD_JSON_METHODS = ["users.getLoggedInUser","auth.promoteSession"]
+    def fb_params=(params)
+      @fb_params = params
+      @session_key = params['session_key'] if params 
+    end
 
     #
     # Call facebook server with a method request. Most keyword arguments
@@ -44,58 +55,42 @@ module FacebookRb
     # If an error occurs, a FacebookError exception will be raised
     # with the proper code and message.
     #
-    def call( method, params )
+    def call(method, params={})
       api_params = params.dup
 
       # Prepare standard arguments for call
-      api_params["method"]      ||= method
-      api_params["api_key"]     ||= api_key
-      api_params["session_key"] ||= session_key
-      api_params["call_id"]     ||= Time.now.tv_sec.to_s
-      api_params["v"]           ||= FB_API_VERSION
-      api_params["format"]      ||= "JSON"
+      api_params['method']      ||= method
+      api_params['api_key']     ||= api_key
+      api_params['session_key'] ||= session_key
+      api_params['call_id']     ||= Time.now.to_s
+      api_params['v']           ||= FB_API_VERSION
+      api_params['format']      ||= 'JSON'
 
       # Encode any Array or Hash arguments into JSON
+      json_encoder = Yajl::Encoder.new
       api_params.each do |key, value|
         if value.is_a?(Array) || value.is_a?(Hash)
-          api_params[key] = JSON.generate(value)
+          api_params[key] = json_encoder.encode(value)
         end
       end
 
-      api_params["sig"] = FacebookRb::generate_signature(api_params, self.secret)
+      api_params['sig'] = generate_signature(api_params, self.secret)
 
       # Call website with POST request
-      begin
-        response = Net::HTTP.post_form( URI.parse(FB_URL), api_params )
-      rescue SocketError => err
-        raise IOError.new( "Cannot connect to the facebook server: " + err )
-      end
+      response = Net::HTTP.post_form( URI.parse(FB_URL), api_params )
 
       # Handle response
-      fb_method = api_params["method"]
-      body = response.body
-      return body
+      self.last_response = response.body
+      data = Yajl::Parser.parse(response.body)
 
-      #begin
-      #  data = JSON.parse( body )
-      #  if data.include?( "error_msg" ) then
-      #    raise FacebookError.new( data["error_code"] || 1, data["error_msg"] )
-      #  end
-      #rescue JSON::ParserError => ex
-      #  if BAD_JSON_METHODS.include?(fb_method) # Little hack because this response isn't valid JSON
-      #    return body
-      #  else
-      #    raise ex
-      #  end
-      #end
-      #return data
+      if data.include?('error_msg')
+        raise FacebookError.new(data['error_code'], data['error_msg'])
+      end
+
+      return data
     end
 
-    def finalize_params
-      #convert arrays to json
-    end
-
-    def add_standard_params(method, params)
+    def add_special_params(method, params)
       #call_as_apikey for Permissions API
       #ss Session secret
       #use_ssl_resources
@@ -166,79 +161,18 @@ module FacebookRb
     #   a md5 hash to be checked against the signature provided by Facebook
     #
     def generate_signature(fb_params, secret)
+      #Convert any symbol keys to strings
+      #otherwise sort() bombs
+      fb_params.each_key do |key|
+        fb_params[key.to_s] = fb_params.delete(key) if key.is_a?(Symbol)
+      end
+
       str = String.new
       fb_params.sort.each do |key, value|
-        str << "#{key}=#{value}"
+        str << "#{key.to_s}=#{value}"
       end
       Digest::MD5.hexdigest("#{str}#{secret}")
     end
-  end
-
-  class User
-      FIELDS = [:uid, :status, :political, :pic_small, :name, :quotes, :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, :timezone, :relationship_status, :hometown_location, :about_me, :wall_count, :significant_other_id, :pic_big, :music, :work_history, :sex, :religion, :notes_count, :activities, :pic_square, :movies, :has_added_app, :education_history, :birthday, :birthday_date, :first_name, :meeting_for, :last_name, :interests, :current_location, :pic, :books, :affiliations, :locale, :profile_url, :proxied_email, :email_hashes, :allowed_restrictions, :pic_with_logo, :pic_big_with_logo, :pic_small_with_logo, :pic_square_with_logo]
-      STANDARD_FIELDS = [:uid, :first_name, :last_name, :name, :timezone, :birthday, :sex, :affiliations, :locale, :profile_url, :proxied_email]
-
-      def self.all_fields
-          FIELDS.join(",")
-      end
-
-      def self.standard_fields
-          STANDARD_FIELDS.join(",")
-      end
-
-      def initialize(fb_hash, session)
-          @fb_hash = fb_hash
-          @session = session
-      end
-
-      def [](key)
-          @fb_hash[key]
-      end
-
-      def uid
-          return self["uid"]
-      end
-
-      def profile_photos
-          @session.photos.get("uid"=>uid, "aid"=>profile_pic_album_id)
-      end
-
-      def profile_pic_album_id
-          merge_aid(-3, uid)
-      end
-
-      def merge_aid(aid, uid)
-          uid = uid.to_i
-          ret = (uid << 32) + (aid & 0xFFFFFFFF)
-          return ret
-      end
-  end
-
-  class Photos
-    def initialize(session)
-      @session = session
-    end
-
-    def get(params)
-      pids = params["pids"]
-      if !pids.nil? && pids.is_a?(Array)
-        pids = pids.join(",")
-        params["pids"] = pids
-      end
-      @session.call("photos.get", params)
-    end
-  end
-
-  # Returns the login/add app url for your application.
-  #
-  # options:
-  #    - :next => a relative next page to go to. relative to your facebook connect url or if :canvas is true, then relative to facebook app url
-  #    - :canvas => true/false - to say whether this is a canvas app or not
-  def self.login_url(api_key, options={})
-    login_url = "http://api.facebook.com/login.php?api_key=#{api_key}"
-    login_url << "&next=#{options[:next]}" if options[:next]
-    login_url << "&canvas" if options[:canvas]
-    login_url
   end
 
   # This Rack middleware checks the signature of Facebook params and
@@ -260,15 +194,18 @@ module FacebookRb
     
     def call(env)
       request = Rack::Request.new(env)
-      if fb_params = FacebookRb::get_valid_fb_params(request.params, 'fb_sig')
-        env["facebook.original_method"] = env["REQUEST_METHOD"]
-        env["REQUEST_METHOD"] = fb_params['request_method']
-      else
-        fb_params = FacebookRb::get_valid_fb_params(request.cookies, @options[:api_key])
-      end
+      
+      client = Client.new(@options[:api_key], @options[:secret])
 
-      env['facebook.client'] = Client.new(@options[:api_key], @options[:secret], fb_params)
+      if fb_params = client.get_valid_fb_params(request.params, 'fb_sig')
+        #env["facebook.original_method"] = env["REQUEST_METHOD"]
+        #env["REQUEST_METHOD"] = fb_params['request_method']
+      else
+        fb_params = client.get_valid_fb_params(request.cookies, @options[:api_key])
+      end
+      client.fb_params = fb_params
       env['facebook.params'] = fb_params
+      env['facebook.client'] = client
 
       return @app.call(env)
     end

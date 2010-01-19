@@ -3,15 +3,15 @@
 Facebookrb is currently a work in progress.
 It aims to be a lightweight yet fully featured client for the [Facebook API](http://wiki.developers.facebook.com/index.php/API).
 It is mostly based on MiniFB (http://github.com/appoxy/mini_fb) and includes some features inspired by rack-facebook (http://github.com/carlosparamio/rack-facebook).
-Otherwise, it tries to emulate the official Facebook PHP library.
+In other instances, it emulates the official Facebook PHP library.
 
 == Installation
 
     gem install facebookrb
 
-You will need to have installed either the `yajl-ruby` or `json` gem for JSON encoding/decoding.
-
 == General Usage
+	
+	require 'facebookrb'
 
 You will want to create a client to make calls to Facebook
 
@@ -20,6 +20,9 @@ You will want to create a client to make calls to Facebook
 If you are using the middleware, there will be one created for you already,
 available in `env['facebook.client']`.
 
+    user_hash = fb_client.call("Users.getInfo", "session_key"=>@session_key, "uids"=>@uid, "fields"=>User.all_fields)
+
+Which simply returns the parsed json response from Facebook.
 The client will ask for results in JSON by default.
 
 == Middleware
@@ -28,30 +31,17 @@ The middleware checks the signature of Facebook params, and stores them in env.
 
     require 'facebookrb'
 
-    use Rack::Facebook, :secret => "SECRET", :api_key => "APIKEY"
+    use Rack::Facebook, :api_key => "APIKEY", :secret => "SECRET"
 
-Also, you can optionally convert the request method from the Facebook POST to the original HTTP
-method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
-
-The Facebook parameters in the request are stored if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
-
-    env['facebook.params']
-
-The most general case is to use call method:
-    fb_client = env['facebook.client']
-
-    user_hash = fb_client.call("Users.getInfo", "session_key"=>@session_key, "uids"=>@uid, "fields"=>User.all_fields)
-
-Which simply returns the parsed json response from Facebook.
-
-== Current Features
-
+The Facebook parameters in the request are stored in `env['facebook.params']` and `env['facebook.client'].fb_params` if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
 
 == Planned Features
 
-  * Support for Facebook Connect, cookie params
+  * Facebook Connect
   * Batching (http://wiki.developers.facebook.com/index.php/Using_Batching_API)
   * Base domain (http://wiki.developers.facebook.com/index.php/Base_Domain)
   * Preload FQL (http://wiki.developers.facebook.com/index.php/Preload_FQL)
   * Permissions API (http://wiki.developers.facebook.com/index.php/Permissions_API)
   * Session Secret (http://wiki.developers.facebook.com/index.php/Session_Secret)
+  * Converting the request method from the Facebook POST to the original HTTP method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
+
