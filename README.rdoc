@@ -18,7 +18,7 @@ You will want to create a client to make calls to Facebook
     fb_client = FacebookRb::Client.new("API_KEY", "SECRET")
 
 If you are using the middleware, there will be one created for you already,
-available in <tt>env['facebook.client']</tt>.
+available in <tt>env\['facebook.client'\]</tt>.
 
     user_hash = fb_client.call("Users.getInfo", "session_key"=>@session_key, "uids"=>@uid, "fields"=>User.all_fields)
 
@@ -33,7 +33,7 @@ The middleware checks the signature of Facebook params, and stores them in env.
 
     use Rack::Facebook, :api_key => "APIKEY", :secret => "SECRET"
 
-The Facebook parameters in the request are stored in <tt>env['facebook.params']</tt> and <tt>env['facebook.client'].fb_params</tt> if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
+The Facebook parameters in the request are stored in <tt>env\['facebook.params'\]</tt> and <tt>env\['facebook.client'\].fb_params</tt> if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
 
 == Planned Features
 
