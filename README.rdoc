@@ -2,8 +2,6 @@
 
 Facebookrb is currently a work in progress.
 It aims to be a lightweight yet fully featured client for the {Facebook API}[http://wiki.developers.facebook.com/index.php/API].
-It is mostly based on {MiniFB}[http://github.com/appoxy/mini_fb] and includes some features inspired by {rack-facebook}[http://github.com/carlosparamio/rack-facebook].
-In other instances, it emulates the official Facebook PHP library.
 
 == Installation
 
@@ -15,25 +13,32 @@ In other instances, it emulates the official Facebook PHP library.
 
 You will want to create a client to make calls to Facebook
 
-    fb_client = FacebookRb::Client.new("API_KEY", "SECRET")
+    fb = FacebookRb::Client.new(:api_key => "API_KEY", :secret => "SECRET")
 
-If you are using the middleware, there will be one created for you already,
-available in <tt>env['facebook.client']</tt>.
+If you are using the middleware, there will be one created for you already:
+    
+	fb = env['facebook.client']
 
-    user_hash = fb_client.call("Users.getInfo", "session_key"=>@session_key, "uids"=>@uid, "fields"=>User.all_fields)
+Make a call using the shortcut format (thanks tmm1/sinbook)
+
+	user = fb.users.getInfo('uids' => '123235345', 'fields' => ['name', 'sex', 'religion'])
+
+Or the full length format
+
+    user = fb.call('users.getInfo', 'uids' => '123235345', 'fields' => ['name', 'sex', 'religion'])
 
 Which simply returns the parsed json response from Facebook.
 The client will ask for results in JSON by default.
 
 == Middleware
 
-The middleware checks the signature of Facebook params, and stores them in env.
+The middleware creates a client, populates it with valid Facebook params, and stores it in the env.
 
     require 'facebookrb'
 
-    use Rack::Facebook, :api_key => "APIKEY", :secret => "SECRET"
+    use FacebookRb::Middleware, :api_key => "APIKEY", :secret => "SECRET"
 
-The Facebook parameters in the request are stored in <tt>env['facebook.params']</tt> and <tt>env['facebook.client'].fb_params</tt> if the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
+If the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
 
 == Planned Features
 
@@ -45,3 +50,7 @@ The Facebook parameters in the request are stored in <tt>env['facebook.params']<
 * {Session Secret}[http://wiki.developers.facebook.com/index.php/Session_Secret]
 * Converting the request method from the Facebook POST to the original HTTP method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
 
+== Background
+
+It is mostly based on {MiniFB}[http://github.com/appoxy/mini_fb] and includes some features inspired by {rack-facebook}[http://github.com/carlosparamio/rack-facebook].
+In other instances, it emulates the official Facebook PHP library.

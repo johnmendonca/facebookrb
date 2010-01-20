@@ -29,18 +29,14 @@ module FacebookRb
     USER_FIELDS_STANDARD = [:uid, :first_name, :last_name, :name, :timezone, 
       :birthday, :sex, :affiliations, :locale, :profile_url, :proxied_email]
 
-    attr_accessor :api_key, :secret, :session_key, :fb_params
-    attr_accessor :last_response
+    attr_accessor :api_key, :secret, :canvas_url, :format
+    attr_accessor :params, :last_response
 
-    def initialize(api_key, secret, session_key=nil)
-      @api_key = api_key
-      @secret = secret
-      @session_key = session_key
-    end
-
-    def fb_params=(params)
-      @fb_params = params
-      @session_key = params['session_key'] if params 
+    def initialize(options = {})
+      self.api_key = options[:api_key] || options['api_key']
+      self.secret = options[:secret] || options['secret']
+      self.canvas_url = options[:canvas_url] || options['canvas_url']
+      self.format = options[:format] || options['format'] || 'JSON'
     end
 
     #
@@ -60,17 +56,20 @@ module FacebookRb
 
       # Prepare standard arguments for call
       api_params['method']      ||= method
-      api_params['api_key']     ||= api_key
-      api_params['session_key'] ||= session_key
+      api_params['api_key']     ||= self.api_key
+      api_params['format']      ||= self.format
+      api_params['session_key'] ||= self.params['session_key']
       api_params['call_id']     ||= Time.now.to_s
       api_params['v']           ||= FB_API_VERSION
-      api_params['format']      ||= 'JSON'
 
       # Encode any Array or Hash arguments into JSON
+      # Remove any nil values
       json_encoder = Yajl::Encoder.new
       api_params.each do |key, value|
         if value.is_a?(Array) || value.is_a?(Hash)
           api_params[key] = json_encoder.encode(value)
+        elsif value.nil?
+          api_params.delete(key)
         end
       end
 
@@ -96,10 +95,40 @@ module FacebookRb
       #use_ssl_resources
     end
 
-    def extract_fb_params(env)
-      request = Rack::Request(env)
-      fb_params = get_valid_fb_params(request.params, 'fb_sig')
-      fb_params = get_valid_fb_params(request.cookies, @options[:api_key])
+    #
+    # Extracts and validates any Facebook parameters from the request.
+    # We look for parameters from POST, GET, then cookies, in that order. 
+    # POST and GET are always more up-to-date than cookies, so we prefer 
+    # those if they are available.
+    #
+    # Parameters:
+    #   env   the Rack environment
+    #
+    def extract_valid_fb_params(env)
+      request = Rack::Request.new(env)
+
+      #Fetch from POST
+      fb_params = get_valid_fb_params(request.POST, 'fb_sig')
+
+      #Fetch from GET
+      unless fb_params
+        # note that with preload FQL, it's possible to receive POST params in
+        # addition to GET, and a different prefix is used for each
+        fb_params = get_valid_fb_params(request.GET, 'fb_sig')
+        fb_post_params = get_valid_fb_params(request.POST, 'fb_post_sig')
+        if fb_params && fb_post_params
+          fb_params.merge!(fb_post_params) 
+        elsif fb_post_params && !fb_params
+          fb_params = fb_post_params
+        end
+      end
+
+      #Fetch from cookies
+      unless fb_params
+        fb_params = get_valid_fb_params(request.cookies, self.options['api_key'])
+      end
+      
+      self.params = fb_params
     end
 
     # Get the signed parameters that were sent from Facebook. Validates the set
@@ -225,19 +254,13 @@ module FacebookRb
     end
     
     def call(env)
-      request = Rack::Request.new(env)
-      
-      client = Client.new(@options[:api_key], @options[:secret])
+      fb = Client.new(@options)
+      fb.extract_valid_fb_params(env)
 
-      if fb_params = client.get_valid_fb_params(request.params, 'fb_sig')
-        #env["facebook.original_method"] = env["REQUEST_METHOD"]
-        #env["REQUEST_METHOD"] = fb_params['request_method']
-      else
-        fb_params = client.get_valid_fb_params(request.cookies, @options[:api_key])
-      end
-      client.fb_params = fb_params
-      env['facebook.params'] = fb_params
-      env['facebook.client'] = client
+      env['facebook.client'] = fb
+
+      #env["facebook.original_method"] = env["REQUEST_METHOD"]
+      #env["REQUEST_METHOD"] = fb_params['request_method']
 
       return @app.call(env)
     end
