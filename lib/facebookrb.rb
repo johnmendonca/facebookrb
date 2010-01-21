@@ -39,6 +39,10 @@ module FacebookRb
       self.format = options[:format] || options['format'] || 'JSON'
     end
 
+    def params
+      @params ||= {}
+    end
+
     #
     # Call facebook server with a method request. Most keyword arguments
     # are passed directly to the server with a few exceptions.
@@ -96,7 +100,8 @@ module FacebookRb
     end
 
     #
-    # Extracts and validates any Facebook parameters from the request.
+    # Extracts and validates any Facebook parameters from the request, and
+    # stores them in the client.
     # We look for parameters from POST, GET, then cookies, in that order. 
     # POST and GET are always more up-to-date than cookies, so we prefer 
     # those if they are available.
@@ -104,28 +109,25 @@ module FacebookRb
     # Parameters:
     #   env   the Rack environment
     #
-    def extract_valid_fb_params(env)
+    def extract_params(env)
       request = Rack::Request.new(env)
 
       #Fetch from POST
-      fb_params = get_valid_fb_params(request.POST, 'fb_sig')
+      fb_params = get_params_from(request.POST, 'fb_sig')
 
       #Fetch from GET
       unless fb_params
         # note that with preload FQL, it's possible to receive POST params in
         # addition to GET, and a different prefix is used for each
-        fb_params = get_valid_fb_params(request.GET, 'fb_sig')
-        fb_post_params = get_valid_fb_params(request.POST, 'fb_post_sig')
-        if fb_params && fb_post_params
-          fb_params.merge!(fb_post_params) 
-        elsif fb_post_params && !fb_params
-          fb_params = fb_post_params
-        end
+        fb_get_params = get_params_from(request.GET, 'fb_sig') || {}
+        fb_post_params = get_params_from(request.POST, 'fb_post_sig') || {}
+        fb_get_params.merge!(fb_post_params) 
+        fb_params = fb_get_params unless fb_get_params.empty?
       end
 
       #Fetch from cookies
       unless fb_params
-        fb_params = get_valid_fb_params(request.cookies, self.options['api_key'])
+        fb_params = get_params_from(request.cookies, self.api_key)
       end
       
       self.params = fb_params
@@ -150,7 +152,7 @@ module FacebookRb
     #   the subset of parameters containing the given prefix, and also matching
     #   the signature associated with them, or nil if the params do not validate
     #
-    def get_valid_fb_params(params,  namespace='fb_sig')
+    def get_params_from(params,  namespace='fb_sig')
       prefix = "#{namespace}_"
       fb_params = Hash.new
       params.each do |key, value|
@@ -159,23 +161,12 @@ module FacebookRb
         end
       end
       
-      signature = params[namespace]
-      return fb_params if signature && valid_signature?(fb_params, signature)
+      param_sig = params[namespace]
+      gen_sig = generate_signature(fb_params, self.secret)
+      return fb_params if param_sig == gen_sig
       nil
     end
 
-    # Validates that a given set of parameters match their signature.
-    # Parameters all match a given input prefix, such as "fb_sig".
-    #
-    # Parameters:
-    #   fb_params     an array of all Facebook-sent parameters, not 
-    #                 including the signature itself
-    #   expected_sig  the expected result to check against
-    #
-    def valid_signature?(fb_params, expected_sig)
-      expected_sig == generate_signature(fb_params, self.secret)
-    end
-    
     # Generate a signature using the application secret key.
     #
     # The only two entities that know your secret key are you and Facebook,
@@ -192,16 +183,11 @@ module FacebookRb
     #   a md5 hash to be checked against the signature provided by Facebook
     #
     def generate_signature(fb_params, secret)
-      #Convert any symbol keys to strings
-      #otherwise sort() bombs
-      fb_params.each_key do |key|
-        fb_params[key.to_s] = fb_params.delete(key) if key.is_a?(Symbol)
+      arr = []
+      fb_params.each do |key, value|
+        arr << "#{key}=#{value}"
       end
-
-      str = String.new
-      fb_params.sort.each do |key, value|
-        str << "#{key.to_s}=#{value}"
-      end
+      str = arr.sort.join
       Digest::MD5.hexdigest("#{str}#{secret}")
     end
 
@@ -209,7 +195,7 @@ module FacebookRb
     # Allows making calls like `client.users.getInfo`
     #
     class APIProxy
-      Types = %w[ admin application auth batch comments connect data events
+      TYPES = %w[ admin application auth batch comments connect data events
         fbml feed fql friends groups links liveMessage notes notifications
         pages photos profile sms status stream users video ]
 
@@ -227,7 +213,7 @@ module FacebookRb
       end
     end
 
-    APIProxy::Types.each do |n|
+    APIProxy::TYPES.each do |n|
       class_eval %[
         def #{n}
           (@proxies||={})[:#{n}] ||= APIProxy.new(:#{n}, self)
@@ -255,7 +241,7 @@ module FacebookRb
     
     def call(env)
       fb = Client.new(@options)
-      fb.extract_valid_fb_params(env)
+      fb.extract_params(env)
 
       env['facebook.client'] = fb
 

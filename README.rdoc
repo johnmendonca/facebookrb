@@ -1,44 +1,49 @@
 = facebookrb 
 
-Facebookrb is currently a work in progress.
-It aims to be a lightweight yet fully featured client for the {Facebook API}[http://wiki.developers.facebook.com/index.php/API].
+Facebookrb aims to be a lightweight yet fully featured client for the 
+{Facebook API}[http://wiki.developers.facebook.com/index.php/API].
+The functions and features are intentionally kept simple, so you can spend
+your time reading the official Facebook documentation rather than learning
+how the code works.
 
 == Installation
 
     gem install facebookrb
 
 == General Usage
-	
-    require 'facebookrb'
 
-You will want to create a client to make calls to Facebook
-
-    fb = FacebookRb::Client.new(:api_key => "API_KEY", :secret => "SECRET")
-
-If you are using the middleware, there will be one created for you already:
-    
-	fb = env['facebook.client']
-
-Make a call using the shortcut format (thanks tmm1/sinbook)
-
-	user = fb.users.getInfo('uids' => '123235345', 'fields' => ['name', 'sex', 'religion'])
-
-Or the full length format
-
-    user = fb.call('users.getInfo', 'uids' => '123235345', 'fields' => ['name', 'sex', 'religion'])
-
-Which simply returns the parsed json response from Facebook.
-The client will ask for results in JSON by default.
-
-== Middleware
-
-The middleware creates a client, populates it with valid Facebook params, and stores it in the env.
+The easiest way is to use the middleware.  Put this in your config.ru, Sinatra application, or wherever you declare middleware:
 
     require 'facebookrb'
 
     use FacebookRb::Middleware, :api_key => "APIKEY", :secret => "SECRET"
 
-If the request is valid (http://wiki.developers.facebook.com/index.php/Verifying_The_Signature)
+This will create a Facebook API client, populate it with any parameters from Facebook, and store it in the Rack env for you.
+
+    fb = env['facebook.client']
+
+Make a call using short or long format (thanks tmm1/sinbook for the short version)
+
+    user = fb.users.getInfo('uids' => '123235345', 'fields' => ['name', 'sex', 'religion'])
+    user = fb.call('users.getInfo', 'uids' => '123235345', 'fields' => ['name', 'sex', 'religion'])
+
+This call parses the JSON from Facebook and returns the resulting objects (a Hash, Array, String, or Integer depending on how complex the JSON is).
+The raw text of the response is also available:
+
+	fb.call(...)
+	fb.last_response
+
+If you received params from Facebook, and they are {valid}(http://wiki.developers.facebook.com/index.php/Verifying_The_Signature), then you can access them:
+
+    fb.params['user']
+
+The 'session_key' param will automatically be passed forward to any API calls if available.
+
+== Options
+
+The options for the middleware and the client are identical, and are values you get from Facebook:
+
+    :api_key, :secret, :canvas_url
 
 == Planned Features
 
@@ -50,7 +55,10 @@ If the request is valid (http://wiki.developers.facebook.com/index.php/Verifying
 * {Session Secret}[http://wiki.developers.facebook.com/index.php/Session_Secret]
 * Converting the request method from the Facebook POST to the original HTTP method used by the client. (http://wiki.developers.facebook.com/index.php/Fb_sig_request_method)
 
-== Background
+== Acknowledgements
 
-It is mostly based on {MiniFB}[http://github.com/appoxy/mini_fb] and includes some features inspired by {rack-facebook}[http://github.com/carlosparamio/rack-facebook].
-In other instances, it emulates the official Facebook PHP library.
+The code for this project was initially derived from:
+* {sinbook}[http://github.com/tmm1/sinbook]
+* {MiniFB}[http://github.com/appoxy/mini_fb]
+* {rack-facebook}[http://github.com/carlosparamio/rack-facebook]
+* The official Facebook PHP library
