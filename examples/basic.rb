@@ -6,16 +6,18 @@ require 'haml'
 
 require 'facebookrb'
 
-use FacebookRb::Middleware, :api_key => 'APIKEY', :secret => 'SECRET'
+use FacebookRb::Middleware, 
+  :api_key => 'API_KEY', 
+  :secret => 'SECRET'
 
 get '/' do
-  fb_params = env['facebook.params'] || {:damn => 'man'}
+  fb_params = env['facebook.client'].params
   haml :index, :locals => { :fb_params => fb_params.sort, :params => params.sort }
 end
 
 get '/user' do
-  fb_client = env['facebook.client'] || raise('No Facebook Client')
-  results = fb_client.call('users.getInfo')
+  fb = env['facebook.client']
+  results = fb.users.getInfo(:uids => fb.params['user'], :fields => FacebookRb::Client::USER_FIELDS)
   results.inspect
 end
 
