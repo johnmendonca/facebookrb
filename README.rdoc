@@ -36,6 +36,7 @@ The raw text of the response is also available:
 If you received params from Facebook, and they are {valid}(http://wiki.developers.facebook.com/index.php/Verifying_The_Signature), then you can access them:
 
     fb.params['user']
+	fb['user']  # Also works
 
 The 'session_key' param will automatically be passed forward to any API calls if available.
 

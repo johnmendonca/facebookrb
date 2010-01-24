@@ -1,3 +1,4 @@
+require 'rack/request' unless defined?(Rack::Request)
 require 'uri'
 require 'net/http'
 require 'digest/md5'
@@ -30,7 +31,7 @@ module FacebookRb
       :birthday, :sex, :affiliations, :locale, :profile_url, :proxied_email]
 
     attr_accessor :api_key, :secret, :canvas_url, :format
-    attr_accessor :params, :last_response
+    attr_accessor :last_response
 
     def initialize(options = {})
       self.api_key = options[:api_key] || options['api_key']
@@ -41,6 +42,22 @@ module FacebookRb
 
     def params
       @params ||= {}
+    end
+
+    def [](key)
+      params[key]
+    end
+
+    def valid?
+      !params.empty?
+    end
+
+    def url(path = nil)
+      path ? "#{canvas_url}#{path}" : canvas_url
+    end
+
+    def addurl
+      "http://apps.facebook.com/add.php?api_key=#{self.api_key}"
     end
 
     #
@@ -86,7 +103,7 @@ module FacebookRb
       self.last_response = response.body
       data = Yajl::Parser.parse(response.body)
 
-      if data.include?('error_msg')
+      if data.is_a?(Hash) && data['error_msg']
         raise FacebookError.new(data['error_code'], data['error_msg'])
       end
 
@@ -107,10 +124,15 @@ module FacebookRb
     # those if they are available.
     #
     # Parameters:
-    #   env   the Rack environment
+    #   env   the Rack environment, or a Rack request
     #
     def extract_params(env)
-      request = Rack::Request.new(env)
+      #Accept a Request object or the env
+      if env.is_a?(Rack::Request)
+        request = env
+      else
+        request = Rack::Request.new(env)
+      end
 
       #Fetch from POST
       fb_params = get_params_from(request.POST, 'fb_sig')
@@ -130,7 +152,34 @@ module FacebookRb
         fb_params = get_params_from(request.cookies, self.api_key)
       end
       
-      self.params = fb_params
+      @params = convert_params(fb_params)
+    end
+
+    #
+    # Converts some parameter values into more useful forms: 
+    #   * 0 or 1 into true/false
+    #   * Time values into Time objects
+    #   * Comma separated lists into arrays
+    #
+    def convert_params(params)
+      params.each do |key, value|
+        case key
+        when 'friends', 'linked_account_ids'
+          params[key] = value.split(',')
+        when /(time|expires)$/
+          if value == '0'
+            params[key] = nil
+          else
+            params[key] = Time.at(value.to_f)
+          end
+        when /^(logged_out|position_|in_|is_)/, /added$/
+          params[key] = (value == '1')
+        else
+          params[key] = value
+        end
+      end
+
+      params
     end
 
     # Get the signed parameters that were sent from Facebook. Validates the set
