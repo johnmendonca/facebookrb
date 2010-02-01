@@ -1,4 +1,4 @@
-$:.unshift File.join(File.expand_path(File.dirname(__FILE__)), %w[ .. .. lib ])
+$:.unshift File.join(File.expand_path(File.dirname(__FILE__)), %w[ .. lib ])
 
 require 'rubygems'
 require 'sinatra'

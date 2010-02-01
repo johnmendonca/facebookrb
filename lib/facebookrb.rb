@@ -162,6 +162,8 @@ module FacebookRb
     #   * Comma separated lists into arrays
     #
     def convert_params(params)
+      return nil unless params
+
       params.each do |key, value|
         case key
         when 'friends', 'linked_account_ids'
