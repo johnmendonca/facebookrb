@@ -31,7 +31,7 @@ module FacebookRb
       :birthday, :sex, :affiliations, :locale, :profile_url, :proxied_email]
 
     attr_accessor :api_key, :secret, :canvas_url, :format
-    attr_accessor :last_response
+    attr_accessor :pending_batch, :batch_queue, :last_response
 
     def initialize(options = {})
       self.api_key = options[:api_key] || options['api_key']
@@ -83,18 +83,27 @@ module FacebookRb
       api_params['call_id']     ||= Time.now.to_s
       api_params['v']           ||= FB_API_VERSION
 
-      # Encode any Array or Hash arguments into JSON
-      # Remove any nil values
+      # TODO: break into sep method
       json_encoder = Yajl::Encoder.new
       api_params.each do |key, value|
         if value.is_a?(Array) || value.is_a?(Hash)
           api_params[key] = json_encoder.encode(value)
+        elsif value.is_a?(Time)
+          api_params[key] = value.to_s
+        elsif value.is_a?(Boolean)
+          api_params[key] = ( value ? '1' : '0' )
         elsif value.nil?
           api_params.delete(key)
         end
       end
 
       api_params['sig'] = generate_signature(api_params, self.secret)
+
+      #If in a batch, stash the params in the queue and bail
+      if pending_batch
+        batch_queue << api_params.map { |k,v| "#{k}=#{v}" }.join('&')
+        return
+      end
 
       # Call Facebook with POST request
       response = Net::HTTP.post_form( URI.parse(FB_URL), api_params )
@@ -108,6 +117,24 @@ module FacebookRb
       end
 
       return data
+    end
+
+    #TODO: doc, catch boundary errors
+    def batch(&block)
+      if pending_batch
+        raise FacebookError.new('error_code', 'error_msg')
+      end
+
+      self.batch_queue = []
+      self.pending_batch = true
+
+      yield
+
+      self.pending_batch = false
+      results = call('batch.run', 
+                     :method_feed => self.batch_queue, 
+                     :serial_only => '1')
+      self.batch_queue = nil
     end
 
     def add_special_params(method, params)
@@ -234,11 +261,7 @@ module FacebookRb
     #   a md5 hash to be checked against the signature provided by Facebook
     #
     def generate_signature(fb_params, secret)
-      arr = []
-      fb_params.each do |key, value|
-        arr << "#{key}=#{value}"
-      end
-      str = arr.sort.join
+      str = fb_params.map { |k,v| "#{k}=#{v}" }.sort.join 
       Digest::MD5.hexdigest("#{str}#{secret}")
     end
 
