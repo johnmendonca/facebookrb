@@ -64,10 +64,7 @@ module FacebookRb
     # Call facebook server with a method request. Most keyword arguments
     # are passed directly to the server with a few exceptions.
     #
-    # The default return is a parsed json object.
-    # Unless the 'format' and/or 'callback' arguments are given,
-    # in which case the raw text of the reply is returned. The string
-    # will always be returned, even during errors.
+    # Returns a parsed json object.
     #
     # If an error occurs, a FacebookError exception will be raised
     # with the proper code and message.
@@ -107,23 +104,47 @@ module FacebookRb
       return data
     end
 
-    #TODO: doc, catch boundary errors
-    def batch(&block)
-      if pending_batch
-        #TODO: real error code/message
-        raise FacebookError.new('error_code', 'error_msg')
-      end
+    #
+    # Performs a batch API operation (batch.run)
+    #
+    # Example:
+    #   results = fb.batch do 
+    #     fb.application.getPublicInfo(...)
+    #     fb.users.getInfo(...)
+    #   end
+    #
+    # Options:
+    #   * :raise_errors (default true) - since a batch returns results for
+    #     multiple calls, some may return errors while others do not, by default
+    #     an exception will be raised if any errors are found.  Set to 
+    #     false to disable this and handle errors yourself
+    def batch(options = {})
+      return unless block_given?
+      #TODO: real error code/message
+      raise FacebookError.new('error_code', 'error_msg') if pending_batch 
 
       self.batch_queue = []
       self.pending_batch = true
+      options[:raise_errors] = true if options[:raise_errors].nil?
 
-      yield
+      yield self
 
       self.pending_batch = false
       results = call('batch.run', 
                      :method_feed => self.batch_queue, 
-                     :serial_only => '1')
+                     :serial_only => true)
       self.batch_queue = nil
+
+      #Batch results are an array of JSON strings, parse each
+      results.map! { |json| Yajl::Parser.parse(json) }
+
+      results.each do |data|
+        if data.is_a?(Hash) && data['error_msg']
+          raise FacebookError.new(data['error_code'], data['error_msg'])
+        end
+      end if options[:raise_errors]
+
+      results
     end
 
     def add_special_params(method, params)
@@ -282,7 +303,7 @@ module FacebookRb
     # Allows making calls like `client.users.getInfo`
     #
     class APIProxy
-      TYPES = %w[ admin application auth batch comments connect data events
+      TYPES = %w[ admin application auth comments connect data events
         fbml feed fql friends groups links liveMessage notes notifications
         pages photos profile sms status stream users video ]
 
