@@ -31,8 +31,8 @@ Make a call using short or long format (thanks tmm1/sinbook for the short versio
 This call parses the JSON from Facebook and returns the resulting objects (a Hash, Array, String, or Integer depending on how complex the JSON is).
 The raw text of the response is also available:
 
-	fb.call(...)
-	fb.last_response
+    fb.call(...)
+    fb.last_response
 
 If you received params from Facebook, and they are {valid}[http://wiki.developers.facebook.com/index.php/Verifying_The_Signature], then you can access them:
 

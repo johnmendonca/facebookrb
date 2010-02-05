@@ -120,8 +120,7 @@ module FacebookRb
     #     false to disable this and handle errors yourself
     def batch(options = {})
       return unless block_given?
-      #TODO: real error code/message
-      raise FacebookError.new('error_code', 'error_msg') if pending_batch 
+      raise FacebookError.new(951, 'Batch already started') if pending_batch 
 
       self.batch_queue = []
       self.pending_batch = true
