@@ -80,22 +80,10 @@ module FacebookRb
       api_params['api_key']     ||= self.api_key
       api_params['format']      ||= self.format
       api_params['session_key'] ||= self.params['session_key']
-      api_params['call_id']     ||= Time.now.to_s
+      api_params['call_id']     ||= Time.now.to_f.to_s
       api_params['v']           ||= FB_API_VERSION
 
-      # TODO: break into sep method
-      json_encoder = Yajl::Encoder.new
-      api_params.each do |key, value|
-        if value.is_a?(Array) || value.is_a?(Hash)
-          api_params[key] = json_encoder.encode(value)
-        elsif value.is_a?(Time)
-          api_params[key] = value.to_s
-        elsif value.is_a?(Boolean)
-          api_params[key] = ( value ? '1' : '0' )
-        elsif value.nil?
-          api_params.delete(key)
-        end
-      end
+      convert_outgoing_params(api_params)
 
       api_params['sig'] = generate_signature(api_params, self.secret)
 
@@ -122,6 +110,7 @@ module FacebookRb
     #TODO: doc, catch boundary errors
     def batch(&block)
       if pending_batch
+        #TODO: real error code/message
         raise FacebookError.new('error_code', 'error_msg')
       end
 
@@ -179,7 +168,7 @@ module FacebookRb
         fb_params = get_params_from(request.cookies, self.api_key)
       end
       
-      @params = convert_params(fb_params)
+      @params = convert_incoming_params(fb_params)
     end
 
     #
@@ -188,7 +177,7 @@ module FacebookRb
     #   * Time values into Time objects
     #   * Comma separated lists into arrays
     #
-    def convert_params(params)
+    def convert_incoming_params(params)
       return nil unless params
 
       params.each do |key, value|
@@ -205,6 +194,30 @@ module FacebookRb
           params[key] = (value == '1')
         else
           params[key] = value
+        end
+      end
+
+      params
+    end
+
+    #
+    # Converts parameters being sent to Facebook from ruby objects to the
+    # appropriate text representation
+    #
+    def convert_outgoing_params(params)
+      json_encoder = Yajl::Encoder.new
+      params.each do |key, value|
+        params.delete(key) if value.nil?
+
+        case value
+        when Array, Hash
+          params[key] = json_encoder.encode(value)
+        when Time
+          params[key] = value.to_i.to_s
+        when TrueClass
+          params[key] = '1'
+        when FalseClass
+          params[key] = '0'
         end
       end
 
