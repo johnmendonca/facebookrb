@@ -10,13 +10,15 @@ use FacebookRb::Middleware,
   :api_key => 'API_KEY', 
   :secret => 'SECRET'
 
+helpers do
+  def fb; env['facebook.client']; end
+end
+
 get '/' do
-  fb_params = env['facebook.client'].params
-  haml :index, :locals => { :fb_params => fb_params.sort, :params => params.sort }
+  haml :index, :locals => { :fb_params => fb.params.sort, :params => params.sort }
 end
 
 get '/user' do
-  fb = env['facebook.client']
   results = fb.users.getInfo(:uids => fb.params['user'], :fields => FacebookRb::Client::USER_FIELDS)
   results.inspect
 end
