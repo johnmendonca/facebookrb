@@ -21,7 +21,7 @@ spec = Gem::Specification.new do |s|
 
   # Change these as appropriate
   s.name              = "facebookrb"
-  s.version           = "0.1.0"
+  s.version           = "0.1.1"
   s.summary           = "Simple Facebook API client and middleware"
   s.author            = "John Mendonca"
   s.email             = "joaosinho@gmail.com"
@@ -40,7 +40,7 @@ spec = Gem::Specification.new do |s|
    s.add_dependency("yajl-ruby")
 
   # If your tests use any gems, include them here
-  s.add_development_dependency("rspec")
+  #s.add_development_dependency("rspec")
 
   # If you want to publish automatically to rubyforge, you'll may need
   # to tweak this, and the publishing task below too.

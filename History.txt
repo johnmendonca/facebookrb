@@ -1,0 +1,7 @@
+== 0.1.1 / 2010-02-05
+  * Batch call support
+
+== 0.1.0 / 2010-01-18
+  * Initial release
+  * Basic API call method
+  * Rack middleware

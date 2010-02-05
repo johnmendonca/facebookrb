@@ -1,7 +1,8 @@
-= facebookrb 
+= facebookrb
 
 Facebookrb aims to be a lightweight yet fully featured client for the 
-{Facebook API}[http://wiki.developers.facebook.com/index.php/API].
+{Facebook API}[http://wiki.developers.facebook.com/index.php/API], drawing
+on the best features from existing Ruby Facebook libraries.
 The functions and features are intentionally kept simple, so you can spend
 your time reading the official Facebook documentation rather than learning
 how the code works.
@@ -46,10 +47,26 @@ The options for the middleware and the client are identical, and are values you 
 
     :api_key, :secret, :canvas_url
 
-== Planned Features
+== Features
 
-* Facebook Connect
-* {Batching}[http://wiki.developers.facebook.com/index.php/Using_Batching_API]
+=== Facebook Connect
+
+The library supports reading parameters from cookies, so Connect support should be there (not thoroughly tested ATM).
+
+=== {Batching}[http://wiki.developers.facebook.com/index.php/Using_Batching_API]
+
+	results = fb.batch do 
+	 fb.application.getPublicInfo(...)
+	 fb.users.getInfo(...)
+	end
+
+	results[0]  # => result for first call
+	results[1]  # => result for second call
+
+== Potential Features
+
+These would all be easy to add if anyone needs support for them.
+
 * {Base domain}[http://wiki.developers.facebook.com/index.php/Base_Domain]
 * {Preload FQL}[http://wiki.developers.facebook.com/index.php/Preload_FQL]
 * {Permissions API}[http://wiki.developers.facebook.com/index.php/Permissions_API]
