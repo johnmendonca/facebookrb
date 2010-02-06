@@ -53,15 +53,21 @@ The options for the middleware and the client are identical, and are values you 
 
 The library supports reading parameters from cookies, so Connect support should be there (not thoroughly tested ATM).
 
-=== {Batching}[http://wiki.developers.facebook.com/index.php/Using_Batching_API]
+Extra Info:
+* {Connect/Setting Up Your Site}[http://wiki.developers.facebook.com/index.php/Connect/Setting_Up_Your_Site]
 
-	results = fb.batch do 
-	 fb.application.getPublicInfo(...)
-	 fb.users.getInfo(...)
-	end
+=== Batching
 
-	results[0]  # => result for first call
-	results[1]  # => result for second call
+The batch call will return an array of the results of each call made inside the block:
+
+    app_info, user_info = fb.batch do 
+      fb.application.getPublicInfo(...)
+      fb.users.getInfo(...)
+    end
+
+Extra Info:
+* {Using Batching API}[http://wiki.developers.facebook.com/index.php/Using_Batching_API]
+* {batch.run}[http://wiki.developers.facebook.com/index.php/Batch.run]
 
 == Potential Features
 
