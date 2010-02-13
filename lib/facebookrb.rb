@@ -16,6 +16,7 @@ module FacebookRb
 
   class Client
     FB_URL = "http://api.facebook.com/restserver.php"
+    FB_VIDEO_URL = "http://api-video.facebook.com/restserver.php"
     FB_API_VERSION = "1.0"
     USER_FIELDS = [:uid, :status, :political, :pic_small, :name, :quotes, 
       :is_app_user, :tv, :profile_update_time, :meeting_sex, :hs_info, 
@@ -38,6 +39,9 @@ module FacebookRb
       self.secret = options[:secret] || options['secret']
       self.canvas_url = options[:canvas_url] || options['canvas_url']
       self.format = options[:format] || options['format'] || 'JSON'
+
+      def photos.upload(filename, opts); @obj.call_upload "photos.upload", filename, opts end
+      def video.upload(filename, opts); @obj.call_upload "video.upload", filename, opts end
     end
 
     def params
@@ -92,6 +96,55 @@ module FacebookRb
 
       # Call Facebook with POST request
       response = Net::HTTP.post_form( URI.parse(FB_URL), api_params )
+
+      # Handle response
+      self.last_response = response.body
+      data = Yajl::Parser.parse(response.body)
+
+      if data.is_a?(Hash) && data['error_msg']
+        raise FacebookError.new(data['error_code'], data['error_msg'])
+      end
+
+      return data
+    end
+
+    def call_upload(method, filename, params={})
+      content = File.open(filename, 'rb') { |f| f.read }
+      api_params = params.dup
+
+      # Prepare standard arguments for call
+      api_params['method']      ||= method
+      api_params['api_key']     ||= self.api_key
+      api_params['format']      ||= self.format
+      api_params['session_key'] ||= self.params['session_key']
+      api_params['call_id']     ||= Time.now.to_f.to_s
+      api_params['v']           ||= FB_API_VERSION
+
+      convert_outgoing_params(api_params)
+      api_params['sig'] = generate_signature(api_params, self.secret)
+      boundary = Digest::MD5.hexdigest(content)
+
+      header = {'Content-type' => "multipart/form-data, boundary=#{boundary}"}
+      # Build query
+      query = ''
+      api_params.each { |a, v|
+        query <<
+          "--#{boundary}\r\n" <<
+          "Content-Disposition: form-data; name=\"#{a}\"\r\n\r\n" <<
+          "#{v}\r\n"
+      }
+      query <<
+        "--#{boundary}\r\n" <<
+        "Content-Disposition: form-data; filename=\"#{File.basename(filename)}\"\r\n" <<
+        "Content-Transfer-Encoding: binary\r\n" <<
+        "Content-Type: image/jpeg\r\n\r\n" <<
+        content <<
+        "\r\n" <<
+        "--#{boundary}--"
+
+      # Call Facebook with POST multipart/form-data request
+      uri = method == 'video.upload' ? URI.parse(FB_VIDEO_URL) : URI.parse(FB_URL)
+      response = Net::HTTP.start(uri.host) {|http| http.post uri.path, query, header}
 
       # Handle response
       self.last_response = response.body
