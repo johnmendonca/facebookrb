@@ -54,7 +54,7 @@ The options for the middleware and the client are identical, and are values you 
 The library supports reading parameters from cookies, so Connect support should be there (not thoroughly tested ATM).
 
 Extra Info:
-* {Connect/Setting Up Your Site}[http://wiki.developers.facebook.com/index.php/Connect/Setting_Up_Your_Site]
+* {Facebook Connect}[http://wiki.developers.facebook.com/index.php/Facebook_Connect]
 
 === Batching
 
