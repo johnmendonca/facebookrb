@@ -40,6 +40,7 @@ module FacebookRb
       self.canvas_url = options[:canvas_url] || options['canvas_url']
       self.format = options[:format] || options['format'] || 'JSON'
 
+      #TODO: work with apiproxy to generalize these calls
       def photos.upload(filename, opts); @obj.call_upload "photos.upload", filename, opts end
       def video.upload(filename, opts); @obj.call_upload "video.upload", filename, opts end
     end
@@ -108,6 +109,11 @@ module FacebookRb
       return data
     end
 
+    #
+    # TODO: DRY this out
+    # TODO: Consider other data sources besides File
+    # TODO: Determine mime type consequences
+    #
     def call_upload(method, filename, params={})
       content = File.open(filename, 'rb') { |f| f.read }
       api_params = params.dup

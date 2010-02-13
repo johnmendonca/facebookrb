@@ -86,3 +86,6 @@ The code for this project was initially derived from:
 * {MiniFB}[http://github.com/appoxy/mini_fb]
 * {rack-facebook}[http://github.com/carlosparamio/rack-facebook]
 * The official Facebook PHP library
+
+Contributors:
+* {hanklords}[http://github.com/hanklords] 
